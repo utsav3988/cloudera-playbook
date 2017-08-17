@@ -1,0 +1,7 @@
+---
+# Prereqs plays
+
+- name: Stop and disable firewall
+  yum: name=firewalld state=latest
+  tags: firewall
+  notify: stop firewalld

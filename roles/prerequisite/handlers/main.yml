@@ -1,0 +1,5 @@
+---
+# Prereqs handlers
+
+- name: stop firewalld
+  service: name=firewalld state=stopped enabled=false
