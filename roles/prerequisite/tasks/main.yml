@@ -1,5 +1,6 @@
 ---
 # Prereqs plays
 
+# https://www.cloudera.com/documentation/enterprise/latest/topics/install_cdh_disable_iptables.html
 - name: Stop and disable firewalld
   service: name=firewalld state=stopped enabled=false
