@@ -20,7 +20,6 @@
   get_url:
     url: http://archive.cloudera.com/cm5/repo-as-tarball/5.12.0/cm5.12.0-centos7.tar.gz
     dest: /tmp/
-    checksum: md5:4e5a5d16ec64be9a68fb97d5a34e04a0
 
 - name: Extract CM tar.gz /var/www/html/cm5/
   unarchive:
