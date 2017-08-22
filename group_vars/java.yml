@@ -1,0 +1,8 @@
+---
+#Install external Java if no internet connection or you want to use custom java
+external_java: true
+src_java_path: /root/jdk/files/
+#dont change dest java path until necessary
+dest_java_path: /tmp/jdk/
+# Always use otn-pub link instead of otn link as otn link required login
+jdk_dwonload_link: "http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm"

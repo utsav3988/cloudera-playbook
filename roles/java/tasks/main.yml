@@ -1,41 +1,106 @@
 ---
+- include_vars: ../../../group_vars/java
 
+# Check Java rpm exist in SRC location.
+
+- name: Check Java RPM exists
+  stat:
+    path: "{{ src_java_path }}"
+  register: stat_result
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java)
+
+- name: Download Java RPM
+  get_url:
+    url="{{ jdk_dwonload_link }}"
+    dest="{{ src_java_path }}"
+    headers="Cookie:oraclelicense=accept-securebackup-cookie"
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java) and (stat_result.stat.exists == False)
+  delegate_to: 127.0.0.1
+# copy external java from custom location
+- name: copy custom JDK for installation
+  synchronize:
+   src: "{{ src_java_path }}"
+   dest: "{{ dest_java_path }}"
+  # dest: "{{ cm_rpm_dest_dir }}"
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java)
+
+# Get JDK file name for installation
+- name: get jdk file name
+  find:
+    paths: "{{ dest_java_path }}"
+  register: jdk_file
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java)
+
+# Set path with filename
+- set_fact:
+    jdk_path: "{{ jdk_file.files.0.path }}"
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java)
+
+# Install RPM package
+- name: Install package.
+  yum:
+    name: "{{ jdk_path }}"
+    state: present
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java)
+
+- name: Cleanup tmp files
+  file:
+    path="{{ jdk_path }}"
+    state=absent
+  ignore_errors: True
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java)
+
+
+
+# Installing Cloudera default JDK, Requires internet connection and
+# JDK to be copied either in local repo Or cloudera yum repo
 - name: Install Oracle JDK
   yum: name={{ item }} state=latest update_cache=yes
   with_items:
     - oracle-j2sdk1.7
     - unzip
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (not external_java)
 
+# Check JCE policy files exists
 - stat: path="{{ tmp_dir }}/UnlimitedJCEPolicyJDK7.zip"
   register: jce_zip_exists
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (not external_java)
 
+# Download JCE policy files from oracle
 - name: Download JCE unlimited policy
   get_url:
     url=http://download.oracle.com/otn-pub/java/jce/7/UnlimitedJCEPolicyJDK7.zip
     dest="{{ tmp_dir }}/UnlimitedJCEPolicyJDK7.zip"
     headers="Cookie:oraclelicense=accept-securebackup-cookie"
-  when: jce_zip_exists.stat.exists == False
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (not external_java)
 
+# Unzip JCE policy files
 - name: Unzip JCE unlimited policy files
   unarchive:
     src: "{{ tmp_dir }}/UnlimitedJCEPolicyJDK7.zip"
     dest: "{{ tmp_dir }}"
     copy: no
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (not external_java)
 
+# Install local_policy jars
 - name: Install local_policy.jar
   copy:
     src: "{{ tmp_dir }}/UnlimitedJCEPolicy/local_policy.jar"
     dest: /usr/java/jdk1.7.0_67-cloudera/jre/lib/security/local_policy.jar
     backup: yes
     remote_src: True
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (not external_java)
 
+# Install US_export_policy jars
 - name: Install US_export_policy.jar
   copy:
     src: "{{ tmp_dir }}/UnlimitedJCEPolicy/US_export_policy.jar"
     dest: /usr/java/jdk1.7.0_67-cloudera/jre/lib/security/US_export_policy.jar
     backup: yes
     remote_src: True
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (not external_java)
 
+# Cleaning up temp files
 - name: Cleanup tmp files
   file:
     path="{{ tmp_dir }}/{{ item }}"
@@ -44,3 +109,4 @@
     - UnlimitedJCEPolicy
     - UnlimitedJCEPolicyJDK7.zip
   ignore_errors: True
+  when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (not external_java)
