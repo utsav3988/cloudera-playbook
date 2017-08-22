@@ -8,7 +8,8 @@
     path: "{{ src_java_path }}"
   register: stat_result
   when: (ansible_distribution|lower == "redhat") or (ansible_distribution|lower == "centos") and (external_java)
-
+  delegate_to: 127.0.0.1
+  
 - name: Download Java RPM
   get_url:
     url="{{ jdk_dwonload_link }}"
