@@ -1,5 +1,5 @@
 ---
-
+- include_vars: ../../../group_vars/db_server
 - name: Install MariaDB packages
   yum: name={{ item }} state=installed
   with_items:
@@ -21,6 +21,9 @@
   service: name=mariadb state=started enabled=yes
 
 - include: mysql_secure_installation.yml
-- include: databases.yml
 
 
+- include: mysql_master_setup.yml
+  when: mysql_replication
+- include: mysql_slave_setup.yml
+  when: mysql_replication

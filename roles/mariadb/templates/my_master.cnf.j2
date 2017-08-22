@@ -43,3 +43,9 @@ innodb_log_file_size            = 512M
 [mysqld_safe]
 log-error = {{ mysql_log }}
 pid-file  = {{ mysql_pid_file }}
+
+[mariadb]
+log-bin = mysql-bin
+server-id = 1
+log-basename = master1
+bind-address=0.0.0.0
