@@ -1,0 +1,70 @@
+---
+# Install http server
+- name: confirm apache createrepo rsync installed
+  yum: name={{ item }} state=installed
+  with_items:
+      - httpd
+      - createrepo
+      - rsync
+  when: inventory_hostname in groups['scm_server'][0]
+
+# Create Destination Directory for CM repo
+- name: Create Directory for CM repo
+  file:
+    path: "{{ cm_rpm_dest_dir }}"
+    state: directory
+    mode: 0755
+  when: inventory_hostname in groups['scm_server'][0]
+
+- name: Check CM RPM exists
+  find:
+    path: "{{ role_path }}/files/"
+  register: cm_files
+  delegate_to: 127.0.0.1
+
+# Use  below command to get list of files as recursive is not aviaalbe in get_url
+#   wget -O - "{{ cm_dwonload_link }}" | grep rpm | cut -d\> -f 7 | sed -e 's!</a!!g'|sort -u
+- name: list CM RPMS from remote URL
+  shell: wget -qO - "{{ cm_dwonload_link }}" | grep rpm | cut -d\> -f 7 | sed -e 's!</a!!g'|sort -u
+  register: cm_files_list
+  when: cm_files.matched == 0
+  delegate_to: 127.0.0.1
+
+- name: Download CM RPMs
+  get_url:
+    url: "{{ cm_dwonload_link }}{{ item }}"
+    dest: "{{ role_path }}/files/"
+  with_items: "{{ cm_files_list.stdout_lines }}"
+  when: cm_files.matched == 0
+  delegate_to: 127.0.0.1
+
+# Copy Cloudera Manager Files
+- name: copy files to html location
+  synchronize:
+   src: "{{ role_path }}/files/"
+   dest: "{{ cm_rpm_dest_dir }}"
+  when: inventory_hostname in groups['scm_server'][0]
+
+# Yum repo createtion
+- name: Run create repo command in repo directory
+  shell: createrepo {{ cm_rpm_dest_dir }}
+  args:
+    chdir: "{{ cm_rpm_dest_dir }}"
+  when: inventory_hostname in groups['scm_server'][0]
+  notify: restart httpd
+
+# Clean yum metadata cache
+- name: yum-clean-metadata
+  command: yum clean metadata
+  args:
+    warn: no
+  when: inventory_hostname in groups['scm_server'][0]
+
+# Add Yum repo
+- name: Add Yum repositorty
+  yum_repository:
+  # Packages for Cloudera Manager, Version 5, on RedHat or CentOS 7 x86_64
+    name: cloudera-manager
+    description: Cloudera Manager
+    baseurl: http://{{ hostvars[groups['scm_server'][0]]['inventory_hostname'] }}/cloudera/cm5/latest/
+    gpgcheck:  no
